@@ -1,3 +1,8 @@
+-- To run this file, get to a bash prompt,
+-- then cd into the directory where this file is
+-- then run these two commands, one after the other:
+-- createdb baalshem-adrenotropic-app
+-- psql -d baalshem-adrenotropic-app -a -f baalshem-adrenotropic-db.sql
 --
 -- PostgreSQL database dump
 --
