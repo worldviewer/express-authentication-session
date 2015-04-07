@@ -2,12 +2,18 @@
 <!DOCTYPE HTML>
 <html>
 <body>
-<h1>Article: <%= articleToDisplay.title %></h1>
+<h1>Article: <%= articleToDisplay.title %></h1><a href="/articles/<%=id%>/edit">Edit</a>
 <div>
   <ul>
   	<li>Author: <%= articleToDisplay.Author.first_name  %> <%= articleToDisplay.Author.last_name  %></li>
   	<li>Content: <%= articleToDisplay.content  %></li>
   </ul>
+</div>
+<div>
+	<a href="/articles">Articles</a><br>
+	<a href="/authors">Authors</a><br>
+	<a href="/about">About</a><br>
+	<a href="/contact">Contact</a><br>
 </div>
 </body>
 </html>
