@@ -1,18 +1,94 @@
+// Use Express for routing
 var express = require('express');
+
+// bodyParser puts form POST's into req.body
 var bodyParser = require('body-parser');
-var pg = require("pg");
-var methodOverride = require("method-override");
+
+// Postgres is the DB
+var pg = require('pg');
+
+var session = require('express-session');
+
+// Use methodOverride to permit PUT or PATCH + DELETE HTTP verbs
+var methodOverride = require('method-override');
 
 var app = express();
 
+// Use EJS for templating
 app.set('view engine', 'ejs');
+
+// The "extended" syntax allows for rich objects and arrays to 
+// be encoded into the URL-encoded format, allowing for a 
+// JSON-like experience with URL-encoded.
 app.use(bodyParser.urlencoded({extended: true}));
 
-// Set up method override to work with POST requests that have the parameter "_method=DELETE"
+// Set up method override to work with POST requests that have 
+// the parameter "_method=DELETE", etc
 app.use(methodOverride('_method'));
 
-// Refactor connection and query code
+// Express session uses cookies to store User state
+app.use(session({
+	// Required option: This is the secret used to sign the 
+	// session ID cookie
+	secret: 'taco for now',
+
+	// Forces the session to be saved back to the session 
+	// store, even if the session was never modified during 
+	// the request
+	resave: false,
+
+	// Forces a session that is "uninitialized" to be saved to 
+	// the store. A session is uninitialized when it is new but 
+	// not modified.
+	saveUninitialized: true
+}));
+
+// ??? - Little bit confused on what these do ...
+
+// Create middleware methods that are available for every 
+// route request: login() + currentUser() + logout()
+app.use('/', function(req, res, next) {
+
+    // Save user session on req, and identify it w/ user.id
+    // To logout, just erase this session information
+    
+    // 1.
+    req.login = function(user) {
+        // set the value on session.userId
+        req.session.userId = user.id;
+    };
+    
+	// 2.
+	req.currentUser = function() {
+
+		// Search User table for id that matches the
+		// userId in cookie session
+		return db.User.find({
+	        where: { id: req.session.userId }
+
+	    // 
+	    }).then(function(user) {
+	        req.user = user;
+	        return user;
+	    });
+	};
+  
+  	// 3. 
+	req.logout = function() {
+    	req.session.userId = null;
+		req.user = null;
+	}
+
+	// Go to next middleware, or route ...
+	next();
+});
+
+// Look up models with sequelize's auto-created 
+// /models/index.js file.  For this project, we have 3 data
+// models: ARTICLES + AUTHORS + USERS
 var db = require("./models");
+
+// ARTICLES ROUTES
 
 app.get('/articles', function(req,res) {
 	console.log("GET /articles");
@@ -73,7 +149,8 @@ app.put('/articles/:id', function(req, res) {
 	});
 });
 
-// Fill in these author routes!
+// AUTHORS ROUTES
+
 app.get('/authors', function(req, res) {
 	console.log("GET /authors")
 
@@ -106,6 +183,51 @@ app.get('/authors/:id', function(req, res) {
   	});
 });
 
+// USER ROUTES
+
+// Welcome / Sign-up Page
+app.get('/signup', function(req, res) {
+  res.send("Coming soon\n");
+});
+
+// Create a new User
+// Remember to have Method=Post and action=users for the form
+app.post('/users', function(req, res) {
+    var user = req.body.user;
+    
+    db.User.
+	    createSecure(user.email, user.password)
+		.then(function() {
+        	res.send("You Official B\n");
+	    });
+});
+
+// this tells us we will need a `views/login` file
+app.get('/login', function(req, res) {
+	res.render('/users/login');
+});
+
+// this where the form goes
+app.post('/login', function (req, res) {
+    var user = req.body.user;
+    
+    db.User
+    .authenticate(user.email, user.password)
+    .then(function(user) {
+        req.login(user);
+        res.redirect('/users/profile');
+    });
+});
+
+app.get('/profile', function(req, res) {
+  req.currentUser()
+    .then(function (user) {
+      res.render('users/profile', {user: user});
+    })
+});
+
+// STATIC PAGE ROUTES
+
 app.get('/', function(req,res) {
 	res.render('site/index');
 });
@@ -121,7 +243,6 @@ app.get('/contact', function(req,res) {
 app.listen(3000, function() {
 	var msg = "* Listening on Port 3000 *";
 
-	// Just for fun... what's going on in this code?
 	/*
 	 * When the server starts listening, it displays:
 	 *
