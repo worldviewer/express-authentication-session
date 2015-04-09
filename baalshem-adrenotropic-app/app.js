@@ -43,8 +43,6 @@ app.use(session({
 	saveUninitialized: true
 }));
 
-// ??? - Little bit confused on what these do ...
-
 // Create middleware methods that are available for every 
 // route request: login() + currentUser() + logout()
 app.use('/', function(req, res, next) {
@@ -64,7 +62,7 @@ app.use('/', function(req, res, next) {
 		// Search User table for id that matches the
 		// userId in cookie session
 		return db.User.find({
-	        where: { id: req.session.userId }
+	        where: {id: req.session.userId}
 
 	    // 
 	    }).then(function(user) {
@@ -120,18 +118,18 @@ app.post('/articles', function(req,res) {
 app.get('/articles/:id', function(req, res) {
 	var id = req.params.id;
 
-	db.Article.find({include: [db.Author], where: {id:id}})
+	db.Article.find({include: [db.Author], where: {id: id}})
   	.then(function(dbArticle) {
-  		res.render('articles/article', {articleToDisplay:dbArticle, id:id})
+  		res.render('articles/article', {articleToDisplay: dbArticle, id: id})
   	});
 });
 
 app.get('/articles/:id/edit', function(req, res) {
 	var id = req.params.id;
 
-	db.Article.find({include: [db.Author], where: {id:id}})
+	db.Article.find({include: [db.Author], where: {id: id}})
   	.then(function(dbArticle) {
-  		res.render('articles/edit', {article:dbArticle})
+  		res.render('articles/edit', {article: dbArticle})
   	});
 });
 
@@ -156,7 +154,7 @@ app.get('/authors', function(req, res) {
 
 	db.Author.all()
   	.then(function(dbAuthors) {
-  		res.render('authors/index', {ejsAuthors:dbAuthors});
+  		res.render('authors/index', {ejsAuthors: dbAuthors});
   	});
 });
 
@@ -177,53 +175,79 @@ app.post('/authors', function(req, res) {
 app.get('/authors/:id', function(req, res) {
 	console.log("GET /authors/:id")
 
-	db.Author.find({include: db.Article, where: {id:req.params.id}})
+	db.Author.find({include: db.Article, where: {id: req.params.id}})
   	.then(function(dbAuthor) {
-  		res.render('authors/author', {ejsAuthor:dbAuthor})
+  		res.render('authors/author', {ejsAuthor: dbAuthor})
   	});
 });
 
-// USER ROUTES
+// USER SIGNUP/LOGIN ROUTES
 
-// Welcome / Sign-up Page
+// Welcome/Sign-up Page: Posts to /users
 app.get('/signup', function(req, res) {
-  res.send("Coming soon\n");
+	res.render('users/signup');
 });
 
-// Create a new User
-// Remember to have Method=Post and action=users for the form
+// Attempt to create a user; if successful, send them to the login
+// page; otherwise, redirect back to the /signup route
 app.post('/users', function(req, res) {
-    var user = req.body.user;
-    
+	var user = req.body.user;
+
     db.User.
 	    createSecure(user.email, user.password)
-		.then(function() {
-        	res.send("You Official B\n");
+		.then(function(dbUser) {
+			if (dbUser) {
+				console.log('User ' + dbUser.email + ' successfully created!');
+	        	res.redirect('/login');
+			} else {
+				console.log('User not created');
+				res.redirect('/signup');
+			}
 	    });
+
 });
 
-// this tells us we will need a `views/login` file
+// Post form to /users
 app.get('/login', function(req, res) {
-	res.render('/users/login');
+	res.render('login');
 });
 
-// this where the form goes
-app.post('/login', function (req, res) {
+// If user authenticates, send them to the /profile route; otherwise,
+// return them to /login route
+app.post('/login', function(req, res) {
     var user = req.body.user;
     
     db.User
     .authenticate(user.email, user.password)
-    .then(function(user) {
-        req.login(user);
-        res.redirect('/users/profile');
+    .then(function(dbUser) {
+    	if (dbUser) {
+    		console.log('User ' + dbUser.email + ' authenticated!');
+	        req.login(dbUser);
+	        res.redirect('/profile');
+
+	    // Our error handling on authentication is very
+	    // minimal at this point, so if authentication does
+	    // not produce a user, then just redirect to the
+	    // login route
+	    } else {
+	    	res.redirect('/login');
+	    }
     });
 });
 
+// Use a promise any time that a database request, or in this case
+// a cookie, is checked
 app.get('/profile', function(req, res) {
-  req.currentUser()
-    .then(function (user) {
-      res.render('users/profile', {user: user});
-    })
+  	req.currentUser()
+    	.then(function(user) {
+    		console.log('User ' + user.email + ' pulled from session!');
+    		res.render('users/profile', {user: user});
+    });
+});
+
+app.get('/logout', function(req, res) {
+	req.logout();
+	res.redirect('/login');
 });
 
 // STATIC PAGE ROUTES

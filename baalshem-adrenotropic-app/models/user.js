@@ -1,7 +1,7 @@
 // Use bcrypt to create password hashes for DB storage
 var bcrypt = require("bcrypt");
 
-// salt + password = passwordDigest
+// salt + assword = passwordDigest
 var salt = bcrypt.genSaltSync(10);
 
 module.exports = function (sequelize, DataTypes) {
